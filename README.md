@@ -1,31 +1,35 @@
-# Model Context Protocol (MCP) Server + Google OAuth
+# Model Context Protocol (MCP) Server + Github OAuth
 
-This is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that supports remote MCP connections, with Google OAuth built-in.
+This is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that supports remote MCP connections, with Github OAuth built-in.
 
-You can deploy it to your own Cloudflare account, and after you create your own Google Cloud OAuth client app, you'll have a fully functional remote MCP server that you can build off. Users will be able to connect to your MCP server by signing in with their Google account.
+You can deploy it to your own Cloudflare account, and after you create your own Github OAuth client app, you'll have a fully functional remote MCP server that you can build off. Users will be able to connect to your MCP server by signing in with their GitHub account.
 
 You can use this as a reference example for how to integrate other OAuth providers with an MCP server deployed to Cloudflare, using the [`workers-oauth-provider` library](https://github.com/cloudflare/workers-oauth-provider).
 
 The MCP server (powered by [Cloudflare Workers](https://developers.cloudflare.com/workers/)): 
 
 * Acts as OAuth _Server_ to your MCP clients
-* Acts as OAuth _Client_ to your _real_ OAuth server (in this case, Google)
+* Acts as OAuth _Client_ to your _real_ OAuth server (in this case, GitHub)
 
 ## Getting Started
 
-Clone the repo & install dependencies: `npm install`
+Clone the repo directly & install dependencies: `npm install`.
+
+Alternatively, you can use the command line below to get the remote MCP Server created on your local machine:
+```bash
+npm create cloudflare@latest -- my-mcp-server --template=cloudflare/ai/demos/remote-mcp-github-oauth
+```
 
 ### For Production
-Create a new [Google Cloud OAuth App](https://cloud.google.com/iam/docs/workforce-manage-oauth-app): 
-- For the Homepage URL, specify `https://mcp-google-oauth.<your-subdomain>.workers.dev`
-- For the Authorization callback URL, specify `https://mcp-google-oauth.<your-subdomain>.workers.dev/callback`
+Create a new [GitHub OAuth App](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app): 
+- For the Homepage URL, specify `https://mcp-github-oauth.<your-subdomain>.workers.dev`
+- For the Authorization callback URL, specify `https://mcp-github-oauth.<your-subdomain>.workers.dev/callback`
 - Note your Client ID and generate a Client secret. 
 - Set secrets via Wrangler
 ```bash
-wrangler secret put GOOGLE_CLIENT_ID
-wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put GITHUB_CLIENT_ID
+wrangler secret put GITHUB_CLIENT_SECRET
 wrangler secret put COOKIE_ENCRYPTION_KEY # add any random string here e.g. openssl rand -hex 32
-wrangler secret put HOSTED_DOMAIN # optional: use this when restrict google account domain
 ```
 #### Set up a KV namespace
 - Create the KV namespace: 
@@ -41,7 +45,7 @@ Test the remote server using [Inspector](https://modelcontextprotocol.io/docs/to
 ```
 npx @modelcontextprotocol/inspector@latest
 ```
-Enter `https://mcp-google-oauth.<your-subdomain>.workers.dev/sse` and hit connect. Once you go through the authentication flow, you'll see the Tools working: 
+Enter `https://mcp-github-oauth.<your-subdomain>.workers.dev/sse` and hit connect. Once you go through the authentication flow, you'll see the Tools working: 
 
 <img width="640" alt="image" src="https://github.com/user-attachments/assets/7973f392-0a9d-4712-b679-6dd23f824287" />
 
@@ -49,7 +53,17 @@ You now have a remote MCP server deployed!
 
 ### Access Control
 
-This MCP server uses Google Cloud OAuth for authentication. All authenticated Google users can access basic tools like "add". When you restrict users with hosted domain, set `HOSTED_DOMAIN` env.
+This MCP server uses GitHub OAuth for authentication. All authenticated GitHub users can access basic tools like "add" and "userInfoOctokit".
+
+The "generateImage" tool is restricted to specific GitHub users listed in the `ALLOWED_USERNAMES` configuration:
+
+```typescript
+// Add GitHub usernames for image generation access
+const ALLOWED_USERNAMES = new Set([
+  'yourusername',
+  'teammate1'
+]);
+```
 
 ### Access the remote MCP server from Claude Desktop
 
@@ -64,7 +78,7 @@ Replace the content with the following configuration. Once you restart Claude De
       "command": "npx",
       "args": [
         "mcp-remote",
-        "https://mcp-google-oauth.<your-subdomain>.workers.dev/sse"
+        "https://mcp-github-oauth.<your-subdomain>.workers.dev/sse"
       ]
     }
   }
@@ -74,14 +88,14 @@ Replace the content with the following configuration. Once you restart Claude De
 Once the Tools (under 🔨) show up in the interface, you can ask Claude to use them. For example: "Could you use the math tool to add 23 and 19?". Claude should invoke the tool and show the result generated by the MCP server.
 
 ### For Local Development
-If you'd like to iterate and test your MCP server, you can do so in local development. This will require you to create another OAuth App on Google Cloud: 
+If you'd like to iterate and test your MCP server, you can do so in local development. This will require you to create another OAuth App on GitHub: 
 - For the Homepage URL, specify `http://localhost:8788`
 - For the Authorization callback URL, specify `http://localhost:8788/callback`
 - Note your Client ID and generate a Client secret. 
 - Create a `.dev.vars` file in your project root with: 
 ```
-GOOGLE_CLIENT_ID=your_development_google_cloud_oauth_client_id
-GOOGLE_CLIENT_SECRET=your_development_google_cloud_oauth_client_secret
+GITHUB_CLIENT_ID=your_development_github_client_id
+GITHUB_CLIENT_SECRET=your_development_github_client_secret
 ```
 
 #### Develop & Test
@@ -108,7 +122,7 @@ You can connect your MCP server to other MCP clients like Windsurf by opening th
 The OAuth Provider library serves as a complete OAuth 2.1 server implementation for Cloudflare Workers. It handles the complexities of the OAuth flow, including token issuance, validation, and management. In this project, it plays the dual role of:
 
 - Authenticating MCP clients that connect to your server
-- Managing the connection to Google Cloud's OAuth services
+- Managing the connection to GitHub's OAuth services
 - Securely storing tokens and authentication state in KV storage
 
 #### Durable MCP
