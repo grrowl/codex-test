@@ -18,6 +18,10 @@
     {
       "new_sqlite_classes": ["MyMCP"],
       "tag": "v1"
+    },
+    {
+      "new_classes": ["UserGraph"],
+      "tag": "v2"
     }
   ],
   "durable_objects": {
@@ -25,6 +29,10 @@
       {
         "class_name": "MyMCP",
         "name": "MCP_OBJECT"
+      },
+      {
+        "class_name": "UserGraph",
+        "name": "USER_GRAPH"
       }
     ]
   },

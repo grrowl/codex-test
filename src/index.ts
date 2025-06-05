@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { Octokit } from "octokit";
 import { GitHubHandler } from "./github-handler";
+import { UserGraph } from "./user-graph";
 
 // Context from the auth process, encrypted & stored in the auth token
 // and provided to the DurableMCP as this.props
@@ -43,6 +44,39 @@ export class MyMCP extends McpAgent<Env, {}, Props> {
         ],
       };
     });
+
+    const getGraph = () => {
+      const id = this.env.USER_GRAPH.idFromName(this.props.login);
+      return this.env.USER_GRAPH.get(id);
+    };
+
+    this.server.tool(
+      "loadRepo",
+      "Load a GitHub repository into the graph",
+      { repo: z.string() },
+      async ({ repo }) => {
+        const stub = getGraph();
+        await stub.fetch("/load", {
+          method: "POST",
+          body: JSON.stringify({ token: this.props.accessToken, repo }),
+        });
+        return { content: [{ type: "text", text: "loaded" }] };
+      },
+    );
+
+    this.server.tool(
+      "cypherQuery",
+      "Run a Cypher query over the imported repository",
+      { query: z.string() },
+      async ({ query }) => {
+        const stub = getGraph();
+        const res = await stub.fetch("/query", {
+          method: "POST",
+          body: JSON.stringify({ cypher: query }),
+        });
+        return { content: [{ type: "text", text: await res.text() }] };
+      },
+    );
 
     // Dynamically add tools based on the user's login. In this case, I want to limit
     // access to my Image Generation tool to just me
